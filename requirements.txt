@@ -1,0 +1,10 @@
+Flask>=2.2.0
+requests
+tiktoken
+pydantic
+pypdf
+python-dotenv
+Flask-Cors
+# Add other packages your API needs below, for example:
+# gunicorn>=20.1.0  # if you plan to run with Gunicorn in production
+# python-dotenv>=0.21.0  # if you want environment variable support
