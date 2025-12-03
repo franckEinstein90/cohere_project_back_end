@@ -3,6 +3,8 @@ requests
 tiktoken
 pydantic
 pypdf
+faiss-cpu
+numpy
 python-dotenv
 Flask-Cors
 # Add other packages your API needs below, for example:
