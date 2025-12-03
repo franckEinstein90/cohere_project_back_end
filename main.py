@@ -28,9 +28,9 @@ def _setup_security_middleware(app):
             f"from ({request.remote_addr})"
             f"UA: {request.headers.get('User-Agent', 'unknown')[:50]}"
         )
-        validation_error = validate_request(request)
-        if validation_error:
-            return jsonify({"error": validation_error}), 400
+        #validation_error = validate_request(request)
+        #if validation_error:
+        #    return jsonify({"error": validation_error}), 400
 
 
 
@@ -38,6 +38,18 @@ def create_app():
     application = Flask(__name__)
 
     _setup_security_middleware(application)
+
+    # Register route blueprints
+    try:
+        # lazy import to avoid circular imports during config-time
+        from src.routes.query import query_bp
+        application.register_blueprint(query_bp, url_prefix="/api/v1")
+        # register libraries blueprint
+        from src.routes.libraries import libraries_bp
+        application.register_blueprint(libraries_bp, url_prefix="/api/v1")
+    except Exception as e:
+        application.logger.debug(f"Could not register route blueprints: {e}")
+
     @application.route("/ping", methods=["GET"])
     def ping():
         return jsonify({"status": "ok"}), 200

@@ -45,6 +45,56 @@ A `.vscode/launch.json` was added with two configurations:
 
 Make sure to select the interpreter at `.venv` in VS Code before debugging.
 
+## Front-end
+
+This project has a separate front-end repository available at:
+
+https://github.com/franckEinstein90/cohere_project_front_end/tree/main
+
+
+## Query endpoint
+
+POST /api/v1/<tool_id>/query
+
+This endpoint accepts a JSON body matching the following schema:
+
+```json
+{
+	"user_prompt": "<string>"
+}
+```
+
+On success the endpoint returns a JSON object like:
+
+```json
+{
+	"tool_id": "<tool_id>",
+	"received": {"user_prompt": "..."},
+	"status": "queued"
+}
+```
+
+If the request body is not JSON, the endpoint returns 400. If the JSON
+is syntactically valid but fails validation (for example `user_prompt` is
+missing or not a string), the endpoint returns 422 with validation details.
+
+Optional conversation history
+
+You may include an optional `conversation` field containing a list of prior turns. Each turn must be an object with `role` (either `user` or `assistant`) and `content` (string). Example:
+
+```json
+{
+	"user_prompt": "followup question",
+	"conversation": [
+		{"role": "user", "content": "Hello"},
+		{"role": "assistant", "content": "Hi — how can I help?"}
+	]
+}
+```
+
+When `tool_id` is `system`, the validated `conversation` (if present) is forwarded to the system processor along with the `user_prompt` and `system` description. The processor receives the conversation as a list of objects and may use it when producing a response.
+
+
 ## Production
 
 For production use, consider a WSGI server such as Gunicorn and environment variables for configuration. Example:
