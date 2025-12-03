@@ -70,8 +70,8 @@ def sanitize_filename(filename: str) -> str:
     return sanitized
 
 
-def read_uploaded_file(uploaded_file) -> tuple[str, str]:
-    """Read and decode uploaded file content.
+def read_uploaded_file(uploaded_file) -> tuple[str, bytes]:
+    """Read the uploaded file content without assuming text encoding.
     
     Args:
         uploaded_file: Flask file object from request.files
@@ -86,11 +86,13 @@ def read_uploaded_file(uploaded_file) -> tuple[str, str]:
         raise InvalidFileError("No file selected")
     
     filename = uploaded_file.filename
-    
+
+    _, ext = os.path.splitext(filename)
+    if ext.lower() not in {".pdf", ".docx"}:
+        raise InvalidFileError("Unsupported file type. Only PDF and DOCX files are allowed.")
+
     try:
-        content = uploaded_file.read().decode('utf-8')
-    except UnicodeDecodeError as e:
-        raise InvalidFileError(f"File must be UTF-8 encoded text: {str(e)}")
+        content = uploaded_file.read()
     except Exception as e:
         raise InvalidFileError(f"Failed to read file: {str(e)}")
     
@@ -139,7 +141,7 @@ def save_file_and_metadata(
     root_path: Path,
     tool_id: str,
     filename: str,
-    content: str,
+    content: bytes,
     metadata_dict: Optional[Dict[str, Any]] = None
 ) -> tuple[Path, Optional[Path]]:
     """Save file content and optional metadata to disk.
@@ -169,7 +171,7 @@ def save_file_and_metadata(
     
     # Save file content
     try:
-        with open(file_path, "w", encoding="utf-8") as fh:
+        with open(file_path, "wb") as fh:
             fh.write(content)
     except Exception as e:
         raise StorageError(f"Failed to save file {file_path}: {str(e)}")
