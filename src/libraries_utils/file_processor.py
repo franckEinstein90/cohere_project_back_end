@@ -4,29 +4,13 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
-
+from werkzeug.datastructures import FileStorage
+################################################################################
 from src.schemas.class_DocumentMetadata import DocumentMetadata
-
-
-class FileProcessingError(Exception):
-    """Base exception for file processing errors."""
-    pass
-
-
-class InvalidFileError(FileProcessingError):
-    """Raised when file validation fails."""
-    pass
-
-
-class StorageError(FileProcessingError):
-    """Raised when file storage operations fail."""
-    pass
-
-
-class MetadataError(FileProcessingError):
-    """Raised when metadata processing fails."""
-    pass
-
+################################################################################
+from .chunk_file_content import chunk_file_content
+################################################################################
+from . import errors as FileErrors
 
 def validate_chunk_parameters(chunk_size: int, chunk_overlap: int) -> None:
     """Validate chunking parameters.
@@ -59,13 +43,13 @@ def sanitize_filename(filename: str) -> str:
         InvalidFileError: If filename is invalid
     """
     if not filename or not isinstance(filename, str):
-        raise InvalidFileError("filename must be a non-empty string")
+        raise FileErrors.InvalidFileError("filename must be a non-empty string")
     
     # Remove directory paths
     sanitized = os.path.basename(filename)
     
     if not sanitized or sanitized in ('.', '..'):
-        raise InvalidFileError(f"Invalid filename: {filename}")
+        raise FileErrors.InvalidFileError(f"Invalid filename: {filename}")
     
     return sanitized
 
@@ -83,16 +67,16 @@ def read_uploaded_file(uploaded_file) -> tuple[str, str]:
         InvalidFileError: If file cannot be read or decoded
     """
     if not uploaded_file or not uploaded_file.filename:
-        raise InvalidFileError("No file selected")
+        raise FileErrors.InvalidFileError("No file selected")
     
     filename = uploaded_file.filename
     
     try:
         content = uploaded_file.read().decode('utf-8')
     except UnicodeDecodeError as e:
-        raise InvalidFileError(f"File must be UTF-8 encoded text: {str(e)}")
+        raise FileErrors.InvalidFileError(f"File must be UTF-8 encoded text: {str(e)}")
     except Exception as e:
-        raise InvalidFileError(f"Failed to read file: {str(e)}")
+        raise FileErrors.InvalidFileError(f"Failed to read file: {str(e)}")
     
     return filename, content
 
@@ -132,7 +116,7 @@ def prepare_metadata_for_storage(
         
         return meta_dict
     except Exception as e:
-        raise MetadataError(f"Failed to prepare metadata: {str(e)}")
+        raise FileErrors.MetadataError(f"Failed to prepare metadata: {str(e)}")
 
 
 def save_file_and_metadata(
@@ -162,7 +146,7 @@ def save_file_and_metadata(
     try:
         base_dir.mkdir(parents=True, exist_ok=True)
     except Exception as e:
-        raise StorageError(f"Failed to create directory {base_dir}: {str(e)}")
+        raise FileErrors.StorageError(f"Failed to create directory {base_dir}: {str(e)}")
     
     file_path = base_dir / filename
     metadata_path = None
@@ -172,7 +156,7 @@ def save_file_and_metadata(
         with open(file_path, "w", encoding="utf-8") as fh:
             fh.write(content)
     except Exception as e:
-        raise StorageError(f"Failed to save file {file_path}: {str(e)}")
+        raise FileErrors.StorageError(f"Failed to save file {file_path}: {str(e)}")
     
     # Save metadata if provided
     if metadata_dict:
@@ -186,7 +170,7 @@ def save_file_and_metadata(
                 file_path.unlink()
             except:
                 pass
-            raise StorageError(f"Failed to save metadata {metadata_path}: {str(e)}")
+            raise FileErrors.StorageError(f"Failed to save metadata {metadata_path}: {str(e)}")
     
     return file_path, metadata_path
 
@@ -194,45 +178,21 @@ def save_file_and_metadata(
 def process_library_upload(
     root_path: Path,
     tool_id: str,
-    uploaded_file,
+    uploaded_file: FileStorage,
     metadata_obj: Optional[DocumentMetadata],
     chunk_size: int,
     chunk_overlap: int,
     uploaded_by: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Process a library file upload.
     
-    This is the main entry point that coordinates all file processing steps:
-    1. Read and validate the uploaded file
-    2. Sanitize the filename
-    3. Prepare metadata for storage
-    4. Save file and metadata to disk
-    
-    Args:
-        root_path: Application root path
-        tool_id: Tool identifier
-        uploaded_file: Flask file object
-        metadata_obj: Validated DocumentMetadata object or None
-        chunk_size: Maximum tokens per chunk
-        chunk_overlap: Token overlap between chunks
-        uploaded_by: Username or identifier of uploader
-        
-    Returns:
-        Dictionary with processing results including paths and metadata
-        
-    Raises:
-        FileProcessingError: If any step fails (with specific subclass)
-    """
-    # Validate chunk parameters
     validate_chunk_parameters(chunk_size, chunk_overlap)
-    
-    # Read uploaded file
+    try:
+        document_chunks = chunk_file_content(uploaded_file, chunk_size, chunk_overlap)
+    except Exception as e:
+        raise FileErrors.FileProcessingError(f"Failed to chunk file content: {str(e)}")
+
     filename, content = read_uploaded_file(uploaded_file)
-    
-    # Sanitize filename
     sanitized_filename = sanitize_filename(filename)
-    
-    # Prepare metadata
     metadata_dict = prepare_metadata_for_storage(
         metadata_obj,
         sanitized_filename,

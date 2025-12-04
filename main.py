@@ -48,7 +48,17 @@ def create_app():
         from src.routes.libraries import libraries_bp
         application.register_blueprint(libraries_bp, url_prefix="/api/v1")
     except Exception as e:
-        application.logger.debug(f"Could not register route blueprints: {e}")
+        # Log full exception so import-time errors are visible in logs
+        application.logger.exception("Could not register route blueprints")
+
+    # Log registered blueprints and available routes for easier debugging
+    try:
+        application.logger.info("Registered blueprints: %s", list(application.blueprints.keys()))
+        for rule in application.url_map.iter_rules():
+            application.logger.debug("Route: %s -> %s", rule.rule, rule.endpoint)
+    except Exception:
+        # If logging of routes fails, don't let it crash the app
+        application.logger.exception("Failed to list registered routes")
 
     @application.route("/ping", methods=["GET"])
     def ping():

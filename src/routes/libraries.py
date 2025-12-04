@@ -6,8 +6,8 @@ from flask import Blueprint, request, jsonify, current_app
 from pydantic import ValidationError
 ################################################################################
 from src.schemas.class_DocumentMetadata import DocumentMetadata
-from src.libraries_utils.file_processor import (
-    process_library_upload,
+from src.libraries_utils.file_processor import process_library_upload
+from src.libraries_utils.errors import (
     FileProcessingError,
     InvalidFileError,
     StorageError,
@@ -20,18 +20,7 @@ libraries_bp = Blueprint("libraries", __name__)
 
 @libraries_bp.route("/<tool_id>/libraries", methods=["POST"])
 def add_library_file(tool_id):
-    """Add (save) a file for the given tool_id.
 
-    Accepts multipart/form-data with:
-      - file: the uploaded file (required)
-      - metadata: JSON string with optional metadata object (optional)
-      - chunk_size: integer, defaults to 500 tokens (optional)
-      - chunk_overlap: integer, defaults to 50 tokens (optional)
-      - uploaded_by: string, username/identifier (optional)
-
-    Saves file to: data/libraries/<tool_id>/<filename>
-    Returns 201 with saved path on success.
-    """
     # Validate request has file upload
     if 'file' not in request.files:
         return jsonify({"error": "no_file", "message": "No file part in the request"}), 400
