@@ -1,9 +1,13 @@
 """File processing utilities for library uploads."""
 import json
 import os
+import logging
+################################################################################
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
+from langchain_community.vectorstores import FAISS
+from langchain_cohere import CohereEmbeddings
 from werkzeug.datastructures import FileStorage
 ################################################################################
 from src.schemas.class_DocumentMetadata import DocumentMetadata
@@ -11,8 +15,10 @@ from src.schemas.class_DocumentMetadata import DocumentMetadata
 from .chunk_file_content import chunk_file_content
 ################################################################################
 from . import errors as FileErrors
+################################################################################
+logger = logging.getLogger(__name__)
 
-def validate_chunk_parameters(chunk_size: int, chunk_overlap: int) -> None:
+def _validate_chunk_parameters(chunk_size: int, chunk_overlap: int) -> None:
     """Validate chunking parameters.
     
     Args:
@@ -185,29 +191,69 @@ def process_library_upload(
     uploaded_by: Optional[str] = None
 ) -> Dict[str, Any]:
     
-    validate_chunk_parameters(chunk_size, chunk_overlap)
+    _validate_chunk_parameters(chunk_size, chunk_overlap)
     try:
-        document_chunks = chunk_file_content(uploaded_file, chunk_size, chunk_overlap)
+        document_chunks = chunk_file_content(
+            uploaded_file=uploaded_file, 
+            chunk_size=chunk_size, 
+            chunk_overlap=chunk_overlap)
     except Exception as e:
         raise FileErrors.FileProcessingError(f"Failed to chunk file content: {str(e)}")
 
-    filename, content = read_uploaded_file(uploaded_file)
-    sanitized_filename = sanitize_filename(filename)
-    metadata_dict = prepare_metadata_for_storage(
-        metadata_obj,
-        sanitized_filename,
-        tool_id,
-        uploaded_by
-    )
+    for i, chunk in enumerate(document_chunks):
+        chunk.metadata['chunk_index'] = i
+        chunk.metadata['source_file'] = uploaded_file.filename
+
+    try:
+        cohere_api_key = os.getenv("COHERE_API_KEY")
+        embeddings = CohereEmbeddings(
+            cohere_api_key=cohere_api_key,
+            model="embed-english-v3.0",
+        )
+    except Exception as e:
+        error_message = f"Failed to initialize Cohere embeddings: {str(e)}"
+        logger.error(error_message)
+        raise e 
+
+    ############################################################################
+    # Load or create vectorstore
+    # There is a vectorstore for each tool_id
+    ############################################################################
+    vectorstore_path = os.getenv("VECTORSTORE_PATH", "vectorstore/") + tool_id + "/"
+    if os.path.exists(vectorstore_path + "index.faiss"):
+        vectorstore = FAISS.load_local(
+            vectorstore_path,
+            embeddings,
+            allow_dangerous_deserialization=True
+        )
+        vectorstore.add_documents(document_chunks)
+    else:
+        os.makedirs(vectorstore_path, exist_ok=True) 
+        vectorstore = FAISS.from_documents(
+            document_chunks,
+            embeddings
+        )
+
+    vectorstore.save_local(vectorstore_path)
+    ############################################################################
+
+    #filename, content = read_uploaded_file(uploaded_file)
+    #sanitized_filename = sanitize_filename(filename)
+    #metadata_dict = prepare_metadata_for_storage(
+    #    metadata_obj,
+    #    sanitized_filename,
+    #    tool_id,
+    #    uploaded_by
+    #)
     
     # Save file and metadata
-    file_path, metadata_path = save_file_and_metadata(
-        root_path,
-        tool_id,
-        sanitized_filename,
-        content,
-        metadata_dict
-    )
+    #file_path, metadata_path = save_file_and_metadata(
+    #    root_path,
+    #    tool_id,
+    #    sanitized_filename,
+    #    content,
+    #    metadata_dict
+    #)
     
     return {
         "filename": sanitized_filename,
