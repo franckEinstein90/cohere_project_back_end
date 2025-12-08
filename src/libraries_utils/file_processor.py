@@ -15,6 +15,7 @@ from src.schemas.class_DocumentMetadata import DocumentMetadata
 from .chunk_file_content import chunk_file_content
 ################################################################################
 from . import errors as FileErrors
+from .read_uploaded_file import read_uploaded_file
 ################################################################################
 logger = logging.getLogger(__name__)
 
@@ -60,31 +61,7 @@ def sanitize_filename(filename: str) -> str:
     return sanitized
 
 
-def read_uploaded_file(uploaded_file) -> tuple[str, str]:
-    """Read and decode uploaded file content.
-    
-    Args:
-        uploaded_file: Flask file object from request.files
-        
-    Returns:
-        Tuple of (filename, content)
-        
-    Raises:
-        InvalidFileError: If file cannot be read or decoded
-    """
-    if not uploaded_file or not uploaded_file.filename:
-        raise FileErrors.InvalidFileError("No file selected")
-    
-    filename = uploaded_file.filename
-    
-    try:
-        content = uploaded_file.read().decode('utf-8')
-    except UnicodeDecodeError as e:
-        raise FileErrors.InvalidFileError(f"File must be UTF-8 encoded text: {str(e)}")
-    except Exception as e:
-        raise FileErrors.InvalidFileError(f"Failed to read file: {str(e)}")
-    
-    return filename, content
+
 
 
 def prepare_metadata_for_storage(
@@ -191,7 +168,6 @@ def process_library_upload(
     uploaded_by: Optional[str] = None
 ) -> Dict[str, Any]:
     
-    _validate_chunk_parameters(chunk_size, chunk_overlap)
     try:
         document_chunks = chunk_file_content(
             uploaded_file=uploaded_file, 
@@ -200,10 +176,16 @@ def process_library_upload(
     except Exception as e:
         raise FileErrors.FileProcessingError(f"Failed to chunk file content: {str(e)}")
 
+    ############################################################################
+    # Add metadata to each chunk
+    ############################################################################
     for i, chunk in enumerate(document_chunks):
         chunk.metadata['chunk_index'] = i
         chunk.metadata['source_file'] = uploaded_file.filename
 
+    ############################################################################
+    # Initialize Cohere embeddings
+    ############################################################################
     try:
         cohere_api_key = os.getenv("COHERE_API_KEY")
         embeddings = CohereEmbeddings(
@@ -237,30 +219,7 @@ def process_library_upload(
     vectorstore.save_local(vectorstore_path)
     ############################################################################
 
-    #filename, content = read_uploaded_file(uploaded_file)
-    #sanitized_filename = sanitize_filename(filename)
-    #metadata_dict = prepare_metadata_for_storage(
-    #    metadata_obj,
-    #    sanitized_filename,
-    #    tool_id,
-    #    uploaded_by
-    #)
-    
-    # Save file and metadata
-    #file_path, metadata_path = save_file_and_metadata(
-    #    root_path,
-    #    tool_id,
-    #    sanitized_filename,
-    #    content,
-    #    metadata_dict
-    #)
-    
+
     return {
-        "filename": sanitized_filename,
-        "content": content,
-        "file_path": file_path,
-        "metadata_path": metadata_path,
-        "metadata_dict": metadata_dict,
-        "chunk_size": chunk_size,
-        "chunk_overlap": chunk_overlap,
+        "status": "success",
     }
