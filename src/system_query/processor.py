@@ -60,7 +60,7 @@ def process_system_tool(
         docs = search_system_vectorstore(
             vectorstore_path=os.getenv("VECTORSTORE_PATH", "vectorstore/") + system.name + "/",
             query=user_prompt,
-            top_k=5
+            top_k=15
         )
         if citation_mode:
             cohere_docs = [{

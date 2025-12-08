@@ -1,8 +1,9 @@
 cohere
 Flask>=2.2.0
+docx2txt
+pydantic
 requests
 tiktoken
-pydantic
 pypdf
 langchain-community
 langsmith

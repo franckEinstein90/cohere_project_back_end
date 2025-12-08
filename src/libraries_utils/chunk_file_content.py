@@ -20,12 +20,13 @@ def chunk_file_content(
         if filetype == FileType.PDF.value:
             # Import here to avoid heavy deps at module import time
             from .chunk_pdf_content import chunk_pdf_content
-
             return chunk_pdf_content(uploaded_file, chunk_size, chunk_overlap)
-        elif filetype == FileType.DOCX.value:
+
+        if filetype == FileType.DOCX.value:
+            from .chunk_docx_content import chunk_docx_content
             return chunk_docx_content(uploaded_file, chunk_size, chunk_overlap)
-        else:
-            raise FileProcessingError(
+
+        raise FileProcessingError(
                 f"Unsupported file type for chunking: {filetype}"
             )
 
