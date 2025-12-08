@@ -16,6 +16,7 @@ from .chunk_file_content import chunk_file_content
 ################################################################################
 from . import errors as FileErrors
 from .read_uploaded_file import read_uploaded_file
+from src.app_utils.database_manager import DocumentLibraryDB
 ################################################################################
 logger = logging.getLogger(__name__)
 
@@ -219,7 +220,45 @@ def process_library_upload(
     vectorstore.save_local(vectorstore_path)
     ############################################################################
 
-
-    return {
-        "status": "success",
-    }
+    try:
+        db = DocumentLibraryDB()
+        # Get file information
+        uploaded_file.seek(0, 2)  # Seek to end
+        file_size = uploaded_file.tell()
+        uploaded_file.seek(0)  # Reset to start
+        
+        # Determine file type
+        file_type = uploaded_file.content_type or uploaded_file.filename.split('.')[-1]
+        
+        # Add to database
+        doc_id = db.add_document(
+            tool_id=tool_id,
+            filename=uploaded_file.filename,
+            metadata_obj=metadata_obj,
+            chunk_count=len(document_chunks),
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            vectorstore_path=vectorstore_path,
+            uploaded_by=uploaded_by,
+            file_size=file_size,
+            file_type=file_type
+        )
+        
+        return {
+            "status": "success",
+            "document_id": doc_id,
+            "filename": uploaded_file.filename,
+            "chunks_created": len(document_chunks),
+            "vectorstore_path": vectorstore_path
+        }
+        
+    except Exception as e:
+        # Log the error but don't fail the upload if only DB insert fails
+        logger.error(f"Failed to store document metadata in database: {str(e)}")
+        return {
+            "status": "success",
+            "warning": "Document vectorized but metadata storage failed",
+            "filename": uploaded_file.filename,
+            "chunks_created": len(document_chunks),
+            "vectorstore_path": vectorstore_path
+        }

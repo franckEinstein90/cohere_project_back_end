@@ -5,6 +5,7 @@ from typing import Optional, List
 from flask import Blueprint, request, jsonify, current_app
 from pydantic import ValidationError
 ################################################################################
+from src.app_utils.database_manager import DocumentLibraryDB
 from src.schemas.class_DocumentMetadata import DocumentMetadata
 from src.libraries_utils.file_processor import process_library_upload
 from src.libraries_utils.errors import (
@@ -16,11 +17,29 @@ from src.libraries_utils.errors import (
 ################################################################################
 libraries_bp = Blueprint("libraries", __name__)
 
-
+@libraries_bp.route("/<tool_id>/libraries", methods=["GET"])
+def list_libraries(tool_id):
+    """List document libraries for a given tool_id."""
+    current_app.logger.info(f"Listing libraries for tool_id={tool_id}")
+    
+    try:
+        db = DocumentLibraryDB()
+        libraries = db.get_documents_by_tool(tool_id)
+        return jsonify({
+            "tool_id": tool_id,
+            "libraries": libraries
+        }), 200
+    except Exception as e:
+        current_app.logger.error(f"Error listing libraries for tool_id={tool_id}: {str(e)}")
+        return jsonify({
+            "error": "internal_error",
+            "message": "An unexpected error occurred",
+            "details": str(e)
+        }), 500
 
 @libraries_bp.route("/<tool_id>/libraries", methods=["POST"])
 def add_library_file(tool_id):
-
+    
     # Validate request has file upload
     if 'file' not in request.files:
         return jsonify({"error": "no_file", "message": "No file part in the request"}), 400

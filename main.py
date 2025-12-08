@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 load_dotenv()
 ################################################################################
 from src.app_utils import validate_request
+from src.app_utils.database_manager import DocumentLibraryDB
+################################################################################
 
 def _setup_security_middleware(app):
     @app.before_request
@@ -35,8 +37,8 @@ def _setup_security_middleware(app):
 
 
 def create_app():
+    
     application = Flask(__name__)
-
     _setup_security_middleware(application)
 
     # Register route blueprints

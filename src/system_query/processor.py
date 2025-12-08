@@ -4,6 +4,7 @@ import cohere
 ################################################################################
 from src.system_query.class_SystemDescription import SystemDescription
 from .search_vectorstore import search_system_vectorstore
+from .format_cohere_answers_with_citations import format_cohere_answers_with_citations
 ################################################################################
 
 _augmented_user_prompt = """
@@ -14,13 +15,19 @@ _augmented_user_prompt = """
     {user_prompt}
     Based on the system description, provide a detailed and accurate answer.
     Mention specific details from the system description to support your answer.
-    Provice examples to support your answer. Compose your answer in the following format:
+
+    Provide examples to support your answer. Compose your answer in the following format:
     -1. Start with a brief summary of the system.
     -2. Provide a detailed answer to the user's question, citing the reference material provided below to the extent possible.
     -3. Provide a list of recommendations 
-    4. Provide cludes with regards to which information regarding the system is currently missing 
-    that could help you provide a better answer, encourage the user to add that infroamtion to the system description.
-    Reference Material:
+    -4. Provide clues with regards to which information regarding the system is currently missing 
+    that could help you provide a better answer, encourage the user to add that information to the system description.
+"""
+_no_citation_user_prompt = """
+    IMPORTANT: Use only the information provided in the reference material below to answer the question and cite it specifically whenever
+    you do so.
+    
+    BEGIN REFERENCE MATERIAL:
     {reference_material}
 """
 
@@ -44,7 +51,8 @@ def _build_system_context(system: SystemDescription) -> str:
 def process_system_tool(
     system: SystemDescription, 
     user_prompt: str, 
-    conversation: Optional[List[Dict[str, Any]]] = None
+    conversation: Optional[List[Dict[str, Any]]] = None,
+    citation_mode: bool = True 
 ) -> Dict[str, Any]:
    
     try:
@@ -54,6 +62,13 @@ def process_system_tool(
             query=user_prompt,
             top_k=5
         )
+        if citation_mode:
+            cohere_docs = [{
+                "data": {
+                    "title": doc.metadata.get("source_file", "Untitled") + "- page " + str(doc.metadata.get("page", "???")  ),
+                    "content": doc.page_content
+                }} for doc, _ in docs
+            ]
     except Exception as e:
         error_message = f"Failed to process system tool: {str(e)}"
         raise Exception(error_message) from e
@@ -61,9 +76,11 @@ def process_system_tool(
 
     full_prompt = _augmented_user_prompt.format(
         system_context=system_context,
-        user_prompt=user_prompt,
-        reference_material="\n".join([doc.page_content for doc, _ in docs])
+        user_prompt=user_prompt
     )
+    if not citation_mode:
+        full_prompt = _no_citation_user_prompt.format( reference_material="\n".join([doc.page_content for doc, _ in docs])) 
+
     try:
         messages = [
             {"role": "system", "content": "You are a helpful security analysis assistant."},
@@ -71,22 +88,34 @@ def process_system_tool(
         ]
         cohere_api_key = os.getenv("COHERE_API_KEY")
         co = cohere.ClientV2(api_key=cohere_api_key)
-        response = co.chat(
-            messages=messages, 
-            temperature=0.7,
-            model="command-a-03-2025"
-        )
+        if citation_mode:
+            response = co.chat(
+                messages=messages, 
+                temperature=0.7,
+                model="command-a-03-2025",
+                documents=cohere_docs,
+                citation_options={"mode": "fast"}
+            )
+        else:
+            response = co.chat(
+                messages=messages, 
+                temperature=0.7,
+                model="command-a-03-2025"
+            )
     except Exception as e:
         error_message = f"Failed to process system tool: {str(e)}"
         raise Exception(error_message) from e
 
     answer = response.message.content[0].text
+    if citation_mode:
+        citations = response.message.citations
+        answer = format_cohere_answers_with_citations(answer, citations)
+    
     result = {
         "action": "process_system",
         "system_name": system.name,
         "user_prompt": user_prompt,
         "processed_at": system.updated_at.isoformat(),
-        "note": "This is a stubbed response. Replace with real processing.",
         "conversation_received": conversation,
         "answer": answer
     }
