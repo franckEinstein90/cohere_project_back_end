@@ -52,14 +52,7 @@ def query_tool(tool_id):
             # model already validated conversation items
             conv = [t.model_dump() for t in body.conversation]
 
-        result = process_system_tool(system_desc, body.user_prompt, conv)
-
-        return jsonify({
-            "tool_id": tool_id,
-            "status": "processed",
-            "result": result,
-            "conversation": conv
-        }), 200
+        return process_system_tool(system_desc, body.user_prompt, conv)
 
     # Default handling for non-system tools: echo the prompt
     response = {

@@ -7,7 +7,6 @@ from langchain_cohere import CohereEmbeddings
 ################################################################################
 
 def search_system_vectorstore(
-    vectorstore_path: str,
     query: str,
     top_k: int = 5
 ) -> list[Document]:

@@ -34,12 +34,35 @@ def _setup_security_middleware(app):
         #if validation_error:
         #    return jsonify({"error": validation_error}), 400
 
-
+def ensure_database_exists(db_path: str = "document_library.db") -> bool:
+    """Ensure the database exists, creating it if necessary.
+    
+    Args:
+        db_path: Path to the database file
+        
+    Returns:
+        bool: True if database was created, False if it already existed
+    """
+    import os
+    
+    if not os.path.exists(db_path):
+        print(f"Database not found at {db_path}. Creating...")
+        db = DocumentLibraryDB(db_path)
+        db.create_database()
+        return True
+    return False
 
 def create_app():
     
     application = Flask(__name__)
     _setup_security_middleware(application)
+
+    db_path = os.getenv("DOCUMENT_DB_PATH", "document_library.db")
+    
+    if ensure_database_exists(db_path):
+        application.logger.info(f"Created document library database at {db_path}")
+    else:
+        application.logger.info(f"Document library database already exists at {db_path}")
 
     # Register route blueprints
     try:
