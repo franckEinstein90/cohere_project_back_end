@@ -31,7 +31,8 @@ _augmented_user_prompt = """
     Mention specific details from the system description to support your answer.
 
     Provide examples to support your answer. Compose your answer in the following format:
-
+    Start by providing a brief description of the system based on the provided system context, and include its name. Then proceed to:
+    
     -1. Provide a detailed answer to the user's question, citing the reference material provided below to the extent 
         possible. Do not make up information that is not in the reference material.
 
