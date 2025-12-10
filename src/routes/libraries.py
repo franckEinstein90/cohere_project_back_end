@@ -69,8 +69,8 @@ def add_library_file(tool_id):
     
     # Get chunk parameters from form data
     try:
-        chunk_size = int(request.form.get('chunk_size', 500))
-        chunk_overlap = int(request.form.get('chunk_overlap', 50))
+        chunk_size = int(request.form.get('chunk_size', 1000))
+        chunk_overlap = int(request.form.get('chunk_overlap', 200))
     except (ValueError, TypeError) as e:
         return jsonify({
             "error": "invalid_parameters",
