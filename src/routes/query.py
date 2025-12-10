@@ -10,12 +10,7 @@ query_bp = Blueprint("query", __name__)
 
 @query_bp.route("/<tool_id>/query", methods=["POST"])
 def query_tool(tool_id):
-    """Handle POST /api/v1/<tool_id>/query
-
-    Validates the JSON body against `QueryRequest` Pydantic model. On
-    success returns a stubbed queued response; on validation error returns 422
-    with error details.
-    """
+    #tools can be: system, playbooks.
     current_app.logger.info(f"Received query for tool_id={tool_id}")
 
     if not request.is_json:
@@ -39,7 +34,10 @@ def query_tool(tool_id):
 
         system_payload = payload.get("system")
         if system_payload is None:
-            return jsonify({"error": "validation_error", "details": [{"loc": ["system"], "msg": "Field required", "type": "missing"}]}), 422
+            return jsonify({
+                "error": "validation_error",
+                "details": [{"loc": ["system"], "msg": "Field required", "type": "missing"}]
+            }), 422
 
         try:
             system_desc = SystemDescription.from_dict(system_payload)
@@ -54,9 +52,7 @@ def query_tool(tool_id):
             # model already validated conversation items
             conv = [t.model_dump() for t in body.conversation]
 
-        result = process_system_tool(system_desc, body.user_prompt, conv)
-
-        return jsonify({"tool_id": tool_id, "status": "processed", "result": result, "conversation": conv}), 200
+        return process_system_tool(system_desc, body.user_prompt, conv)
 
     # Default handling for non-system tools: echo the prompt
     response = {

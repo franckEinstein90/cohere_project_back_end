@@ -1,8 +1,17 @@
+cohere
 Flask>=2.2.0
+docx2txt
+pydantic
 requests
 tiktoken
-pydantic
 pypdf
+langchain-community
+langsmith
+langchain-cohere
+langchain-text-splitters
+faiss-cpu
+Werkzeug
+numpy
 python-dotenv
 Flask-Cors
 # Add other packages your API needs below, for example:
