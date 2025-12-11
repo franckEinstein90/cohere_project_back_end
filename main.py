@@ -30,6 +30,13 @@ def _setup_security_middleware(app):
             f"from ({request.remote_addr})"
             f"UA: {request.headers.get('User-Agent', 'unknown')[:50]}"
         )
+        # filter out suspicious header
+        # add and header with a key encryped with a secret known to server
+        # to validate request authenticity
+        # e.g., X-SERVER-KEY: <HMAC_SHA256(secret, timestamp + request_id)>
+        # User keyvault or secret manager to manage the secret
+
+        # Validate the request here
         #validation_error = validate_request(request)
         #if validation_error:
         #    return jsonify({"error": validation_error}), 400
