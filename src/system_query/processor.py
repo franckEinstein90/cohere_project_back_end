@@ -72,7 +72,7 @@ def process_system_tool(
             system_context = build_system_context(system)
             docs = search_system_vectorstore(
                 query=system_context,
-                top_k=25
+                top_k=35
             )
         except Exception as e:
             error_message = f"Failed to process system tool: {str(e)}"
@@ -99,7 +99,7 @@ def process_system_tool(
                 model="rerank-v3.5",
                 query=full_prompt,
                 documents=reranked_docs,
-                top_n=10
+                top_n=15
             )
             selected_docs = []
             for rerank in rerank_res.results:
