@@ -1,47 +1,16 @@
 ################################################################################
 import os
-import uuid
-from flask import Flask, jsonify, request, g, app
-from datetime import datetime
+from flask import Flask, jsonify
 ################################################################################
 from dotenv import load_dotenv
 ################################################################################
 load_dotenv()
 ################################################################################
-from src.app_utils import validate_request
 from src.app_utils.database_manager import DocumentLibraryDB
+from src.app_utils import setup_security_middleware 
 ################################################################################
 
-def _setup_security_middleware(app):
-    @app.before_request
-    def before_request_func():
-        # Example security check (e.g., API key validation)
-        g.request_start_time = datetime.utcnow()
-
-        # Generate or retrieve a request ID
-        rid = request.headers.get("X-REQUEST-ID", None)
-        if not rid:
-            rid = str(uuid.uuid4())
-            request.environ["X-REQUEST-ID"] = rid
-        g.request_id = rid
-        g.logger = app.logger
-        app.logger.info(
-            f"[{g.request_id}] {request.method} {request.path} started at {g.request_start_time}"
-            f"from ({request.remote_addr})"
-            f"UA: {request.headers.get('User-Agent', 'unknown')[:50]}"
-        )
-        # filter out suspicious header
-        # add and header with a key encryped with a secret known to server
-        # to validate request authenticity
-        # e.g., X-SERVER-KEY: <HMAC_SHA256(secret, timestamp + request_id)>
-        # User keyvault or secret manager to manage the secret
-
-        # Validate the request here
-        #validation_error = validate_request(request)
-        #if validation_error:
-        #    return jsonify({"error": validation_error}), 400
-
-def ensure_database_exists(db_path: str = "document_library.db") -> bool:
+def _ensure_database_exists(db_path: str = "document_library.db") -> bool:
     """Ensure the database exists, creating it if necessary.
     
     Args:
@@ -62,11 +31,11 @@ def ensure_database_exists(db_path: str = "document_library.db") -> bool:
 def create_app():
     
     application = Flask(__name__)
-    _setup_security_middleware(application)
+    setup_security_middleware(application)
 
     db_path = os.getenv("DOCUMENT_DB_PATH", "document_library.db")
     
-    if ensure_database_exists(db_path):
+    if _ensure_database_exists(db_path):
         application.logger.info(f"Created document library database at {db_path}")
     else:
         application.logger.info(f"Document library database already exists at {db_path}")
