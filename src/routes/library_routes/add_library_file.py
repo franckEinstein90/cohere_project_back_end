@@ -13,8 +13,7 @@ from src.libraries_utils.errors import (
     MetadataError,
 )
 
-
-def handle_add_library_file(tool_id):
+def add_library_file(tool_id):
     """Handle adding a library file for a given tool_id."""
     # Validate request has file upload
     if 'file' not in request.files:

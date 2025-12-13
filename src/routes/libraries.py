@@ -1,7 +1,7 @@
 """Flask blueprint for library routes."""
 from flask import Blueprint
 ################################################################################
-from .library_routes import handle_list_libraries, handle_add_library_file
+from .library_routes import handle_list_libraries, add_library_file as handle_add_library_file
 ################################################################################
 libraries_bp = Blueprint("libraries", __name__)
 

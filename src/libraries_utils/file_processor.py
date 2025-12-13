@@ -17,7 +17,7 @@ from .chunk_file_content import chunk_file_content
 ################################################################################
 from . import errors as FileErrors
 from .read_uploaded_file import read_uploaded_file
-from src.app_utils.database_manager import DocumentLibraryDB
+from src.app_utils import DocumentLibraryDB
 ################################################################################
 logger = logging.getLogger(__name__)
 
@@ -231,7 +231,7 @@ def process_library_upload(
         file_type = uploaded_file.content_type or uploaded_file.filename.split('.')[-1]
         
         # Add to database
-        doc_id = db.add_document(
+        doc_id = db.documents.add(
             tool_id=tool_id,
             filename=uploaded_file.filename,
             metadata_obj=metadata_obj,

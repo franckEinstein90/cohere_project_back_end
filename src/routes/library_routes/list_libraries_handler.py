@@ -9,7 +9,7 @@ def handle_list_libraries(tool_id):
     
     try:
         db = DocumentLibraryDB()
-        libraries = db.get_documents_by_tool(tool_id)
+        libraries = db.documents.get_by_tool(tool_id)
         return jsonify({
             "tool_id": tool_id,
             "libraries": libraries
