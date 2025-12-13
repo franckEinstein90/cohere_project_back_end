@@ -107,11 +107,14 @@ class ToolsDB(BaseDB):
         """
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            
+
             updates = []
             params = []
-            
+
             if name is not None:
+                existing_tool = self.get_by_name(name)
+                if existing_tool and existing_tool.get("tool_id") != tool_id:
+                    raise ValueError(f"Tool with name '{name}' already exists.")
                 updates.append("name = ?")
                 params.append(name)
             
