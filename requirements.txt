@@ -14,6 +14,12 @@ Werkzeug
 numpy
 python-dotenv
 Flask-Cors
+
+# Testing dependencies
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.0
+
 # Add other packages your API needs below, for example:
 # gunicorn>=20.1.0  # if you plan to run with Gunicorn in production
 # python-dotenv>=0.21.0  # if you want environment variable support

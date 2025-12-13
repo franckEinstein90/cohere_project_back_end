@@ -45,6 +45,10 @@ def create_app():
         # lazy import to avoid circular imports during config-time
         from src.routes.query import query_bp
         application.register_blueprint(query_bp, url_prefix="/api/v1")
+
+        from src.routes.tools import tools_bp
+        application.register_blueprint(tools_bp, url_prefix="/api/v1")
+
         # register libraries blueprint
         from src.routes.libraries import libraries_bp
         application.register_blueprint(libraries_bp, url_prefix="/api/v1")

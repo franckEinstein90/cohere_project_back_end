@@ -1,11 +1,19 @@
 import tempfile
 import logging
 import os
+from typing import List
+################################################################################
 from werkzeug.datastructures import FileStorage
+from langchain_core.documents import Document
+################################################################################
+from src.schemas.class_ChunkConfig import ChunkConfig
 from .errors import FileProcessingError
 
 
-def chunk_pdf_content(uploaded_file: FileStorage, chunk_size, chunk_overlap):
+def chunk_pdf_content(
+        uploaded_file: FileStorage, 
+        chunk_config: ChunkConfig
+    ) -> List[Document]:
     """Chunk PDF content using PyPDFLoader and a text splitter.
 
     Heavy optional dependencies are imported inside the function to avoid
@@ -63,12 +71,12 @@ def chunk_pdf_content(uploaded_file: FileStorage, chunk_size, chunk_overlap):
                 logging.exception("Failed to delete temporary file %s", tmp_path)
 
             splitter = RecursiveCharacterTextSplitter(
-                chunk_size=chunk_size,
-                chunk_overlap=chunk_overlap,
+                chunk_size=chunk_config.chunk_size,
+                chunk_overlap=chunk_config.chunk_overlap,
                 separators=["\n\n", "\n", " ", ""],
             )
-            chunks = splitter.split_documents(documents)
-            return chunks
+            return splitter.split_documents(documents)
+
     except FileProcessingError:
         raise
     except Exception as e:

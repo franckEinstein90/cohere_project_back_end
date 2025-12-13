@@ -10,6 +10,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_cohere import CohereEmbeddings
 from werkzeug.datastructures import FileStorage
 ################################################################################
+from src.schemas.class_ChunkConfig import ChunkConfig
 from src.schemas.class_DocumentMetadata import DocumentMetadata
 ################################################################################
 from .chunk_file_content import chunk_file_content
@@ -164,16 +165,15 @@ def process_library_upload(
     tool_id: str,
     uploaded_file: FileStorage,
     metadata_obj: Optional[DocumentMetadata],
-    chunk_size: int,
-    chunk_overlap: int,
+    chunk_config: ChunkConfig,
     uploaded_by: Optional[str] = None
 ) -> Dict[str, Any]:
     
     try:
         document_chunks = chunk_file_content(
             uploaded_file=uploaded_file, 
-            chunk_size=chunk_size, 
-            chunk_overlap=chunk_overlap)
+            chunk_config=chunk_config
+        ) 
     except Exception as e:
         raise FileErrors.FileProcessingError(f"Failed to chunk file content: {str(e)}")
 
@@ -236,8 +236,8 @@ def process_library_upload(
             filename=uploaded_file.filename,
             metadata_obj=metadata_obj,
             chunk_count=len(document_chunks),
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
+            chunk_size=chunk_config.chunk_size,
+            chunk_overlap=chunk_config.chunk_overlap,
             vectorstore_path=vectorstore_path,
             uploaded_by=uploaded_by,
             file_size=file_size,
